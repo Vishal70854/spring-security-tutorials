@@ -1,0 +1,61 @@
+-- we can configure basic security in spring boot by adding 2 statements for username and password in application.properties
+-- howeever this is not recommended, we are doing it for testing purpose
+
+Example :
+spring.security.user.name= Vishal
+spring.security.user.password= abc1
+=========================================================================
+now we have to configure spring security for multiple/all users in which are accessing our project
+so to do that we have to create a SecurityConfig class under config package where we will provide our security config for UserDetailsService
+
+syntax : 
+@Configuration  // using this annotation we can define multiple beans for each method inside this class
+@EnableWebSecurity // the @EnableWebSecurity annotation is a powerful tool that enables developers to configure Spring Security for a web application.
+public class SecurityConfig{
+}
+
+	create a Bean of UserDetailsService and define 2 user details for now so that they can authenticate by giving username and password before using our application
+	@Bean   // create a bean of UserDetailsService to give details about the user which can use our application by authenticating
+    // this is authentication of users
+	public UserDetailsService userDetailsService(PasswordEncoder encoder){
+        // defining a user details
+        UserDetails admin = User.withUsername("Vishal")
+                .password(encoder.encode("abc1"))
+                .roles("ADMIN")
+                .build();
+        // defining another user details
+        UserDetails user = User.withUsername("John")
+                .password(encoder.encode("abc2"))
+                .roles("USER")
+                .build();
+        // save the user details in memory usingInMemoryUserDetailsManager(admin, user) for admin and user (users)
+        // since we are not using db to store or fetch the details of user. so storing for now in memory to authenticate users
+        return new InMemoryUserDetailsManager(admin, user);
+    }
+
+	// we will give authorization configuration for our spring boot project as what all endpoints can be accessed via users
+	// to do Authorization we will create Bean of SecurityFilterChain and authorize http requests which we want to permit all or authenticate http requests
+
+    @Bean   // this bean if for SecurityFilterChain which is for authorization of users for
+    // what endpoints we need to bypass and what endpoints need to be authenticated
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+                .csrf(csrf -> csrf.disable())   // disable csrf
+                .authorizeHttpRequests((requests) -> requests
+                        .requestMatchers("/products/welcome").permitAll()   // permit all http requests with /products/welcome
+                        .anyRequest().authenticated()   // authenticate all other requests apart from /products/welcome
+                )
+                .formLogin((form) -> form
+                        .permitAll()
+                );
+        return http.build();
+
+    }
+
+	// create a bean of PasswordEncoder to encrypt password otherwise it may lead to security issues
+    @Bean
+    public PasswordEncoder passwordEncoder(){
+        return new BCryptPasswordEncoder();
+    }
+=======================================================================================
+
