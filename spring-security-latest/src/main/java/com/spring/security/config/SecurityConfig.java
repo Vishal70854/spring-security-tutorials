@@ -1,25 +1,30 @@
 package com.spring.security.config;
 
+import com.spring.security.filter.JwtAuthFilter;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration  // using this annotation we can define multiple beans for each method inside this class
 @EnableWebSecurity // the @EnableWebSecurity annotation is a powerful tool that enables developers to configure Spring Security for a web application.
 @EnableMethodSecurity(prePostEnabled = true)    // this annotation is to enable method level security where we can define which all user roles can access which endpoints(can be done with @PreAuthorize(),@PostAuthorize) etc
 public class SecurityConfig {
+
+    @Autowired
+    private JwtAuthFilter jwtAuthFilter;
 
     // authentication
     @Bean   // create a bean of UserDetailsService to give details about the user which can use our application by authenticating
@@ -57,12 +62,13 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())   // disable csrf
                 .authorizeHttpRequests((requests) -> requests
-                        .requestMatchers("/products/welcome", "/products/new").permitAll()   // permit all http requests with /products/welcome or /products/new
-                        .anyRequest().authenticated()   // authenticate all other requests apart from /products/welcome and /products/new
+                        .requestMatchers("/products/welcome", "/products/new", "/products/authenticate").permitAll()   // permit all http requests with /products/welcome, /products/new, /products/authenticate
+                        .anyRequest().authenticated()   // authenticate all other requests apart from /products/welcome, /products/new, /products/authenticate
                 )
-                .formLogin((form) -> form   // enable login as form login which asks for username and password
-                        .permitAll()
-                );
+                .sessionManagement((session) -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authenticationProvider(authenticationProvider())
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);    // use JwtAuthFilter first and then use default spring boot filter
         return http.build();
 
     }
@@ -86,5 +92,11 @@ public class SecurityConfig {
         authenticationProvider.setPasswordEncoder(passwordEncoder());   // set the password encoder in authentication provider
 
         return authenticationProvider;  // now we will be able to access the endpoints via authentication provider.
+    }
+
+    // define a bean of AuthenticationManager
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
     }
 }

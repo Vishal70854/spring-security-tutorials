@@ -1,5 +1,6 @@
 package com.spring.security.config;
 
+import com.spring.security.config.UserInfoUserDetails;
 import com.spring.security.entity.UserInfo;
 import com.spring.security.repository.UserInfoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
